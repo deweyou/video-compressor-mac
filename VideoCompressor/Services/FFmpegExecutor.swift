@@ -12,7 +12,9 @@ actor FFmpegExecutor {
     func execute(
         command: FFmpegCommand,
         durationSec: Double,
-        onProgress: @escaping @Sendable (Double) -> Void
+        frameRateFallback: Double? = nil,
+        onProgress: @escaping @Sendable (Double) -> Void,
+        onLog: (@Sendable (String) -> Void)? = nil
     ) async throws {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: command.launchPath)
@@ -35,7 +37,11 @@ actor FFmpegExecutor {
             guard durationSec > 0 else { return }
             do {
                 for try await line in stdout.fileHandleForReading.bytes.lines {
-                    guard let processedSec = FFmpegExecutor.progressSeconds(from: line) else { continue }
+                    onLog?(line)
+                    guard let processedSec = FFmpegExecutor.progressSeconds(
+                        from: line,
+                        frameRateFallback: frameRateFallback
+                    ) else { continue }
                     let progress = min(max(processedSec / durationSec, 0), 1)
                     onProgress(progress)
                 }
@@ -48,10 +54,14 @@ actor FFmpegExecutor {
             var combined = ""
             do {
                 for try await line in stderr.fileHandleForReading.bytes.lines {
+                    onLog?(line)
                     combined += line
                     combined += "\n"
                     guard durationSec > 0,
-                          let processedSec = FFmpegExecutor.progressSeconds(from: line) else { continue }
+                          let processedSec = FFmpegExecutor.progressSeconds(
+                            from: line,
+                            frameRateFallback: frameRateFallback
+                          ) else { continue }
                     let progress = min(max(processedSec / durationSec, 0), 1)
                     onProgress(progress)
                 }
@@ -102,7 +112,7 @@ actor FFmpegExecutor {
         currentProcess = nil
     }
 
-    nonisolated static func progressSeconds(from line: String) -> Double? {
+    nonisolated static func progressSeconds(from line: String, frameRateFallback: Double? = nil) -> Double? {
         if line.hasPrefix("out_time_us=") {
             let text = line.replacingOccurrences(of: "out_time_us=", with: "")
             if let us = Double(text), us >= 0 {
@@ -127,6 +137,15 @@ actor FFmpegExecutor {
             let tail = line[range.upperBound...]
             let token = tail.split(separator: " ").first.map(String.init) ?? ""
             return parseClock(token)
+        }
+
+        if let frameRateFallback, frameRateFallback > 0,
+           line.hasPrefix("frame=") {
+            let text = line.replacingOccurrences(of: "frame=", with: "")
+            let token = text.split(whereSeparator: \.isWhitespace).first.map(String.init) ?? text
+            if let frames = Double(token), frames >= 0 {
+                return frames / frameRateFallback
+            }
         }
 
         return nil

@@ -27,6 +27,8 @@
 "estimate_ratio" = "预估压缩率：%@";
 "estimate_time" = "预估压缩耗时：%@";
 "remaining_time" = "预计剩余：%@";
+"remaining_time_calculating" = "预计剩余：计算中…";
+"realtime_speed" = "实时速度：%@";
 "estimate_empty" = "选择视频后显示预估结果。";
 "estimate_fallback_hint" = "源视频码率不可得，当前为估算值。";
 
@@ -37,6 +39,9 @@
 "section_actions" = "执行";
 "button_start" = "开始压缩";
 "button_cancel" = "取消";
+"section_logs" = "运行日志";
+"logs_empty" = "压缩开始后会显示 ffmpeg 运行日志。";
+"button_copy_logs" = "复制日志";
 
 "status_label" = "状态：";
 "status_idle" = "空闲";

@@ -27,6 +27,8 @@
 "estimate_ratio" = "Estimated compression ratio: %@";
 "estimate_time" = "Estimated compression time: %@";
 "remaining_time" = "Estimated remaining: %@";
+"remaining_time_calculating" = "Estimated remaining: calculating...";
+"realtime_speed" = "Realtime speed: %@";
 "estimate_empty" = "Select a video to view estimate.";
 "estimate_fallback_hint" = "Estimated from fallback bitrate because source bitrate is unavailable.";
 
@@ -37,6 +39,9 @@
 "section_actions" = "Actions";
 "button_start" = "Start Compression";
 "button_cancel" = "Cancel";
+"section_logs" = "Runtime Log";
+"logs_empty" = "ffmpeg runtime logs will appear after compression starts.";
+"button_copy_logs" = "Copy Logs";
 
 "status_label" = "Status:";
 "status_idle" = "Idle";

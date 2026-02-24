@@ -18,6 +18,7 @@ struct ContentView: View {
             estimateSection
             outputSection
             actionSection
+            logSection
             statusSection
         }
         .padding(16)
@@ -183,8 +184,16 @@ struct ContentView: View {
                     if let estimatedTime = viewModel.estimatedCompressionTimeSec {
                         Text(L10n.fmt("estimate_time", viewModel.formatDuration(estimatedTime), language: languageStore.language))
                     }
-                    if viewModel.isCompressing, let remaining = viewModel.remainingTimeSec {
-                        Text(L10n.fmt("remaining_time", viewModel.formatDuration(remaining), language: languageStore.language))
+                    if viewModel.isCompressing {
+                        if let speed = viewModel.realtimeSpeedX {
+                            Text(L10n.fmt("realtime_speed", String(format: "%.2fx", speed), language: languageStore.language))
+                        }
+                        if let remaining = viewModel.remainingTimeSec {
+                            Text(L10n.fmt("remaining_time", viewModel.formatDuration(remaining), language: languageStore.language))
+                        } else {
+                            Text(L10n.tr("remaining_time_calculating", language: languageStore.language))
+                                .foregroundStyle(.secondary)
+                        }
                     }
 
                     if viewModel.estimateUsesFallback {
@@ -247,6 +256,29 @@ struct ContentView: View {
                 Text(message)
                     .foregroundStyle(.red)
                     .font(.footnote)
+            }
+        }
+    }
+
+    private var logSection: some View {
+        GroupBox(L10n.tr("section_logs", language: languageStore.language)) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Spacer()
+                    Button(L10n.tr("button_copy_logs", language: languageStore.language)) {
+                        viewModel.copyRuntimeLogToPasteboard()
+                    }
+                    .disabled(viewModel.runtimeLog.isEmpty)
+                }
+
+                ScrollView {
+                    Text(viewModel.runtimeLog.isEmpty ? L10n.tr("logs_empty", language: languageStore.language) : viewModel.runtimeLog)
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                        .padding(4)
+                }
+                .frame(minHeight: 120, maxHeight: 220)
             }
         }
     }

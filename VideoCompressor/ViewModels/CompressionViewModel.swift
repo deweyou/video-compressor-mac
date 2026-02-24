@@ -13,7 +13,9 @@ final class CompressionViewModel: ObservableObject {
     @Published var estimateUsesFallback = false
     @Published var estimatedCompressionTimeSec: Double?
     @Published var remainingTimeSec: Double?
+    @Published var realtimeSpeedX: Double?
     @Published var errorMessage: String?
+    @Published var runtimeLog: String = ""
 
     @Published var selectedPreset: CompressionPreset = .medium
     @Published var outputWidth: Int = 1280
@@ -37,6 +39,8 @@ final class CompressionViewModel: ObservableObject {
     private var compressionTask: Task<Void, Never>?
     private var countdownTask: Task<Void, Never>?
     private var compressionStartDate: Date?
+    private var latestDerivedTotalSec: Double?
+    private let maxRuntimeLogChars = 80_000
 
     var isCompressing: Bool {
         if case .compressing = state {
@@ -187,10 +191,13 @@ final class CompressionViewModel: ObservableObject {
         }
 
         errorMessage = nil
+        runtimeLog = ""
+        realtimeSpeedX = nil
         let settings = currentSettings(outputURL: outputURL)
         state = .compressing(progress: 0)
         compressionStartDate = Date()
-        remainingTimeSec = estimatedCompressionTimeSec
+        remainingTimeSec = nil
+        latestDerivedTotalSec = nil
         startCountdownTicker()
 
         compressionTask?.cancel()
@@ -211,13 +218,27 @@ final class CompressionViewModel: ObservableObject {
                     mediaInfo: mediaInfo,
                     settings: resolvedSettings
                 )
+                await MainActor.run {
+                    self.appendRuntimeLog("$ \(self.commandDescription(command))")
+                }
 
-                try await self.executor.execute(command: command, durationSec: mediaInfo.durationSec) { [weak weakSelf = self] progress in
+                try await self.executor.execute(
+                    command: command,
+                    durationSec: mediaInfo.durationSec,
+                    frameRateFallback: Double(resolvedSettings.outputFPS),
+                    onProgress: { [weak weakSelf = self] progress in
                     guard let strongSelf = weakSelf else { return }
                     Task { @MainActor [strongSelf] in
                         strongSelf.updateProgress(progress)
                     }
-                }
+                },
+                    onLog: { [weak weakSelf = self] line in
+                        guard let strongSelf = weakSelf else { return }
+                        Task { @MainActor [strongSelf] in
+                            strongSelf.handleRuntimeLogLine(line)
+                        }
+                    }
+                )
 
                 await MainActor.run {
                     self.state = .completed(outputURL: uniqueOutput)
@@ -230,6 +251,7 @@ final class CompressionViewModel: ObservableObject {
                         )
                     }
                     self.compressionStartDate = nil
+                    self.latestDerivedTotalSec = nil
                     self.refreshEstimate()
                 }
             } catch {
@@ -241,7 +263,9 @@ final class CompressionViewModel: ObservableObject {
                     }
                     self.stopCountdownTicker()
                     self.remainingTimeSec = nil
+                    self.realtimeSpeedX = nil
                     self.compressionStartDate = nil
+                    self.latestDerivedTotalSec = nil
                 }
             }
         }
@@ -252,6 +276,8 @@ final class CompressionViewModel: ObservableObject {
             state = .canceled
             stopCountdownTicker()
             remainingTimeSec = nil
+            realtimeSpeedX = nil
+            latestDerivedTotalSec = nil
         }
         compressionTask?.cancel()
         Task {
@@ -288,6 +314,13 @@ final class CompressionViewModel: ObservableObject {
         }
     }
 
+    func copyRuntimeLogToPasteboard() {
+        guard !runtimeLog.isEmpty else { return }
+        let board = NSPasteboard.general
+        board.clearContents()
+        board.setString(runtimeLog, forType: .string)
+    }
+
     private func updateProgress(_ progress: Double) {
         state = .compressing(progress: progress)
         guard let start = compressionStartDate, progress > 0.001 else {
@@ -295,6 +328,7 @@ final class CompressionViewModel: ObservableObject {
         }
         let elapsed = Date().timeIntervalSince(start)
         let total = elapsed / progress
+        latestDerivedTotalSec = total
         remainingTimeSec = max(0, total - elapsed)
     }
 
@@ -318,24 +352,18 @@ final class CompressionViewModel: ObservableObject {
     private func updateCountdownFallback() {
         guard isCompressing,
               let start = compressionStartDate,
-              let estimate = estimatedCompressionTimeSec else {
+              let total = latestDerivedTotalSec else {
             return
         }
         let elapsed = Date().timeIntervalSince(start)
-        let fallback = max(0, estimate - elapsed)
-        if case .compressing(let progress) = state, progress <= 0.001 {
-            remainingTimeSec = fallback
-            return
-        }
-        if let existing = remainingTimeSec {
-            remainingTimeSec = min(existing, fallback)
-        } else {
-            remainingTimeSec = fallback
-        }
+        remainingTimeSec = max(0, total - elapsed)
     }
 
     private func loadMedia(url: URL) {
         errorMessage = nil
+        runtimeLog = ""
+        realtimeSpeedX = nil
+        latestDerivedTotalSec = nil
         inputURL = url
         state = .idle
         stopCountdownTicker()
@@ -446,5 +474,55 @@ final class CompressionViewModel: ObservableObject {
             x = temp
         }
         return max(1, x)
+    }
+
+    private func appendRuntimeLog(_ line: String) {
+        guard !line.isEmpty else { return }
+        if runtimeLog.isEmpty {
+            runtimeLog = line
+        } else {
+            runtimeLog += "\n" + line
+        }
+        if runtimeLog.count > maxRuntimeLogChars {
+            runtimeLog = String(runtimeLog.suffix(maxRuntimeLogChars))
+        }
+    }
+
+    private func handleRuntimeLogLine(_ line: String) {
+        appendRuntimeLog(line)
+        guard let speed = Self.parseSpeedX(from: line), speed > 0 else {
+            return
+        }
+        realtimeSpeedX = speed
+    }
+
+    private func commandDescription(_ command: FFmpegCommand) -> String {
+        ([command.launchPath] + command.arguments)
+            .map(Self.shellEscape)
+            .joined(separator: " ")
+    }
+
+    private static func shellEscape(_ value: String) -> String {
+        if value.isEmpty {
+            return "\"\""
+        }
+        if value.contains(where: { $0.isWhitespace || $0 == "\"" || $0 == "'" }) {
+            let escaped = value.replacingOccurrences(of: "\"", with: "\\\"")
+            return "\"\(escaped)\""
+        }
+        return value
+    }
+
+    private static func parseSpeedX(from line: String) -> Double? {
+        guard let speedRange = line.range(of: "speed=") else {
+            return nil
+        }
+        let tail = line[speedRange.upperBound...]
+        let token = tail.split(whereSeparator: \.isWhitespace).first.map(String.init) ?? ""
+        guard token.lowercased() != "n/a" else {
+            return nil
+        }
+        let normalized = token.hasSuffix("x") ? String(token.dropLast()) : token
+        return Double(normalized)
     }
 }
