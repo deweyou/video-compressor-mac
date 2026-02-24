@@ -1,0 +1,63 @@
+"section_input" = "Input";
+"language_label" = "Language";
+"language_system" = "System";
+"language_zh" = "Chinese";
+"language_en" = "English";
+"drop_hint" = "Drop a video file here";
+"button_select_file" = "Choose Video";
+"source_info" = "Source: %dx%d, %d fps, %@";
+
+"section_parameters" = "Compression Parameters";
+"preset_label" = "Preset";
+"preset_high" = "High";
+"preset_medium" = "Medium";
+"preset_small" = "Small";
+"width_label" = "Width";
+"height_label" = "Height";
+"lock_ratio_label" = "Lock Aspect Ratio";
+"fps_label" = "FPS";
+"quality_label" = "Quality";
+"audio_bitrate_label" = "Audio Bitrate";
+"sample_rate_label" = "Sample Rate";
+"channels_label" = "Channels";
+
+"section_estimate" = "Size Estimate";
+"estimate_original" = "Original size: %@";
+"estimate_target" = "Estimated output: %@";
+"estimate_ratio" = "Estimated compression ratio: %@";
+"estimate_time" = "Estimated compression time: %@";
+"remaining_time" = "Estimated remaining: %@";
+"estimate_empty" = "Select a video to view estimate.";
+"estimate_fallback_hint" = "Estimated from fallback bitrate because source bitrate is unavailable.";
+
+"section_output" = "Export Path";
+"button_select_output" = "Choose Output Folder";
+"output_empty" = "No output path";
+
+"section_actions" = "Actions";
+"button_start" = "Start Compression";
+"button_cancel" = "Cancel";
+
+"status_label" = "Status:";
+"status_idle" = "Idle";
+"status_ready" = "Ready";
+"status_compressing" = "Compressing... %d%%";
+"status_completed" = "Completed: %@";
+"status_canceled" = "Canceled";
+
+"error_missing_input" = "No input file selected.";
+"error_unsupported_media" = "Unsupported media: %@";
+"error_missing_encoder" = "Encoder not available: %@";
+"error_invalid_output" = "Output path is invalid or not writable.";
+"error_ffmpeg_failed" = "Compression failed: %@";
+"error_missing_ffmpeg_hint" = "ffmpeg binary is missing. Put executable ffmpeg in Resources/ffmpeg.";
+"error_missing_ffprobe_hint" = "ffprobe binary is missing. Put executable ffprobe in Resources/ffprobe.";
+"error_missing_encoder_both" = "ffmpeg/ffprobe not available. Replace Resources/ffmpeg and Resources/ffprobe with real arm64 binaries.";
+"error_no_video_stream" = "No video stream found.";
+"error_invalid_duration" = "Invalid media duration.";
+"error_invalid_resolution" = "Invalid media resolution.";
+"theme_label" = "Theme";
+"theme_system" = "System";
+"theme_light" = "Light";
+"theme_dark" = "Dark";
+"aspect_ratio_value" = "Aspect ratio: %@";

@@ -1,0 +1,63 @@
+"section_input" = "输入";
+"language_label" = "语言";
+"language_system" = "跟随系统";
+"language_zh" = "中文";
+"language_en" = "English";
+"drop_hint" = "将视频文件拖拽到这里";
+"button_select_file" = "选择视频";
+"source_info" = "源视频：%dx%d，%d fps，%@";
+
+"section_parameters" = "压缩参数";
+"preset_label" = "预设";
+"preset_high" = "高质量";
+"preset_medium" = "中等";
+"preset_small" = "高压缩";
+"width_label" = "宽";
+"height_label" = "高";
+"lock_ratio_label" = "锁定宽高比例";
+"fps_label" = "帧率";
+"quality_label" = "质量";
+"audio_bitrate_label" = "音频码率";
+"sample_rate_label" = "采样率";
+"channels_label" = "声道";
+
+"section_estimate" = "体积预估";
+"estimate_original" = "原始大小：%@";
+"estimate_target" = "预估输出：%@";
+"estimate_ratio" = "预估压缩率：%@";
+"estimate_time" = "预估压缩耗时：%@";
+"remaining_time" = "预计剩余：%@";
+"estimate_empty" = "选择视频后显示预估结果。";
+"estimate_fallback_hint" = "源视频码率不可得，当前为估算值。";
+
+"section_output" = "导出路径";
+"button_select_output" = "选择导出目录";
+"output_empty" = "尚未设置输出路径";
+
+"section_actions" = "执行";
+"button_start" = "开始压缩";
+"button_cancel" = "取消";
+
+"status_label" = "状态：";
+"status_idle" = "空闲";
+"status_ready" = "就绪";
+"status_compressing" = "压缩中... %d%%";
+"status_completed" = "完成：%@";
+"status_canceled" = "已取消";
+
+"error_missing_input" = "未选择输入文件。";
+"error_unsupported_media" = "媒体不支持：%@";
+"error_missing_encoder" = "编码器不可用：%@";
+"error_invalid_output" = "导出路径无效或不可写。";
+"error_ffmpeg_failed" = "压缩失败：%@";
+"error_missing_ffmpeg_hint" = "缺少 ffmpeg。请将可执行文件放到 Resources/ffmpeg。";
+"error_missing_ffprobe_hint" = "缺少 ffprobe。请将可执行文件放到 Resources/ffprobe。";
+"error_missing_encoder_both" = "ffmpeg/ffprobe 不可用。请替换 Resources/ffmpeg 与 Resources/ffprobe 为 arm64 可执行文件。";
+"error_no_video_stream" = "未找到视频流。";
+"error_invalid_duration" = "视频时长无效。";
+"error_invalid_resolution" = "视频分辨率无效。";
+"theme_label" = "主题";
+"theme_system" = "跟随系统";
+"theme_light" = "浅色";
+"theme_dark" = "深色";
+"aspect_ratio_value" = "当前比例：%@";
