@@ -323,6 +323,9 @@ final class CompressionViewModel: ObservableObject {
 
     private func updateProgress(_ progress: Double) {
         state = .compressing(progress: progress)
+        if updateRemainingFromRealtimeSpeedIfPossible() {
+            return
+        }
         guard let start = compressionStartDate, progress > 0.001 else {
             return
         }
@@ -494,6 +497,7 @@ final class CompressionViewModel: ObservableObject {
             return
         }
         realtimeSpeedX = speed
+        _ = updateRemainingFromRealtimeSpeedIfPossible()
     }
 
     private func commandDescription(_ command: FFmpegCommand) -> String {
@@ -524,5 +528,27 @@ final class CompressionViewModel: ObservableObject {
         }
         let normalized = token.hasSuffix("x") ? String(token.dropLast()) : token
         return Double(normalized)
+    }
+
+    @discardableResult
+    private func updateRemainingFromRealtimeSpeedIfPossible() -> Bool {
+        guard isCompressing,
+              let mediaInfo,
+              mediaInfo.durationSec > 0,
+              let speed = realtimeSpeedX,
+              speed > 0,
+              let start = compressionStartDate else {
+            return false
+        }
+
+        let elapsed = Date().timeIntervalSince(start)
+        let total = mediaInfo.durationSec / speed
+        guard total.isFinite else {
+            return false
+        }
+
+        latestDerivedTotalSec = total
+        remainingTimeSec = max(0, total - elapsed)
+        return true
     }
 }

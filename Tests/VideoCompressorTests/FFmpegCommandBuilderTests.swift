@@ -43,7 +43,7 @@ final class FFmpegCommandBuilderTests: XCTestCase {
         XCTAssertTrue(command.arguments.contains("0"))
         XCTAssertTrue(command.arguments.contains("/tmp/in file.mp4"))
         XCTAssertTrue(command.arguments.contains("/tmp/out file.mp4"))
-        XCTAssertTrue(command.arguments.contains("libx264"))
+        XCTAssertTrue(command.arguments.contains("h264_videotoolbox"))
         XCTAssertTrue(command.arguments.contains("aac"))
     }
 }
@@ -86,7 +86,7 @@ struct FFmpegCommandBuilderTests {
         #expect(command.arguments.contains("0"))
         #expect(command.arguments.contains("/tmp/in file.mp4"))
         #expect(command.arguments.contains("/tmp/out file.mp4"))
-        #expect(command.arguments.contains("libx264"))
+        #expect(command.arguments.contains("h264_videotoolbox"))
         #expect(command.arguments.contains("aac"))
     }
 }
