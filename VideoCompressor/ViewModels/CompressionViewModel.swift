@@ -35,6 +35,7 @@ final class CompressionViewModel: ObservableObject {
     private let binaryLocator = BinaryLocator()
 
     private var compressionTask: Task<Void, Never>?
+    private var countdownTask: Task<Void, Never>?
     private var compressionStartDate: Date?
 
     var isCompressing: Bool {
@@ -190,6 +191,7 @@ final class CompressionViewModel: ObservableObject {
         state = .compressing(progress: 0)
         compressionStartDate = Date()
         remainingTimeSec = estimatedCompressionTimeSec
+        startCountdownTicker()
 
         compressionTask?.cancel()
         compressionTask = Task { [weak self] in
@@ -210,15 +212,17 @@ final class CompressionViewModel: ObservableObject {
                     settings: resolvedSettings
                 )
 
-                try await self.executor.execute(command: command, durationSec: mediaInfo.durationSec) { [weak self] progress in
-                    Task { @MainActor in
-                        self?.updateProgress(progress)
+                try await self.executor.execute(command: command, durationSec: mediaInfo.durationSec) { [weak weakSelf = self] progress in
+                    guard let strongSelf = weakSelf else { return }
+                    Task { @MainActor [strongSelf] in
+                        strongSelf.updateProgress(progress)
                     }
                 }
 
                 await MainActor.run {
                     self.state = .completed(outputURL: uniqueOutput)
                     self.remainingTimeSec = 0
+                    self.stopCountdownTicker()
                     if let start = self.compressionStartDate {
                         self.timeEstimator.recordCompression(
                             mediaDurationSec: mediaInfo.durationSec,
@@ -235,6 +239,7 @@ final class CompressionViewModel: ObservableObject {
                     } else {
                         self.state = .failed(message: error.localizedDescription)
                     }
+                    self.stopCountdownTicker()
                     self.remainingTimeSec = nil
                     self.compressionStartDate = nil
                 }
@@ -243,6 +248,11 @@ final class CompressionViewModel: ObservableObject {
     }
 
     func cancelCompression() {
+        if isCompressing {
+            state = .canceled
+            stopCountdownTicker()
+            remainingTimeSec = nil
+        }
         compressionTask?.cancel()
         Task {
             await executor.cancel()
@@ -288,10 +298,47 @@ final class CompressionViewModel: ObservableObject {
         remainingTimeSec = max(0, total - elapsed)
     }
 
+    private func startCountdownTicker() {
+        stopCountdownTicker()
+        countdownTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                await MainActor.run {
+                    self?.updateCountdownFallback()
+                }
+            }
+        }
+    }
+
+    private func stopCountdownTicker() {
+        countdownTask?.cancel()
+        countdownTask = nil
+    }
+
+    private func updateCountdownFallback() {
+        guard isCompressing,
+              let start = compressionStartDate,
+              let estimate = estimatedCompressionTimeSec else {
+            return
+        }
+        let elapsed = Date().timeIntervalSince(start)
+        let fallback = max(0, estimate - elapsed)
+        if case .compressing(let progress) = state, progress <= 0.001 {
+            remainingTimeSec = fallback
+            return
+        }
+        if let existing = remainingTimeSec {
+            remainingTimeSec = min(existing, fallback)
+        } else {
+            remainingTimeSec = fallback
+        }
+    }
+
     private func loadMedia(url: URL) {
         errorMessage = nil
         inputURL = url
         state = .idle
+        stopCountdownTicker()
         remainingTimeSec = nil
         estimatedCompressionTimeSec = nil
         compressionStartDate = nil
